@@ -1,0 +1,5 @@
+dist/
+java-agent/build/
+tests/java/build/
+__pycache__/
+*.pyc

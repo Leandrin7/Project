@@ -1,0 +1,69 @@
+{
+  "_comment": "Chamadas MCP do REA para validar cada suposição do ZPerf contra o SEU build do PZ. Troque APK pelo caminho absoluto gerado por prepare_pz_for_rea.sh.",
+  "apk": "/ABS/PATH/pz-rea/pz-classes.apk",
+  "questions": [
+    {
+      "id": "Q1",
+      "why": "Onde OnZombieUpdate é disparado e se o custo é por zumbi por tick (justifica o LOD/dispatcher).",
+      "calls": [
+        {"name": "search_android_classes", "arguments": {"path": "APK", "query": "IsoZombie"}},
+        {"name": "inspect_android_class", "arguments": {"path": "APK", "class_name": "zombie.characters.IsoZombie"}},
+        {"name": "inspect_android_method", "arguments": {"path": "APK", "class_name": "zombie.characters.IsoZombie", "method_name": "update"}},
+        {"name": "trace_android_references", "arguments": {"path": "APK", "class_name": "zombie.Lua.LuaEventManager", "method_name": "triggerEvent"}}
+      ],
+      "expect": "triggerEvent(\"OnZombieUpdate\", this) dentro do update do zumbi, sem filtro de distância."
+    },
+    {
+      "id": "Q2",
+      "why": "Como o zoom define a área renderizada / tamanho do buffer offscreen (custo do zoom-out).",
+      "calls": [
+        {"name": "search_android_classes", "arguments": {"path": "APK", "query": "OffscreenBuffer"}},
+        {"name": "inspect_android_class", "arguments": {"path": "APK", "class_name": "zombie.core.Core"}},
+        {"name": "inspect_android_method", "arguments": {"path": "APK", "class_name": "zombie.core.Core", "method_name": "getZoom"}},
+        {"name": "trace_android_references", "arguments": {"path": "APK", "class_name": "zombie.core.Core", "method_name": "getZoom"}}
+      ],
+      "expect": "Uso do zoom no dimensionamento da textura/FBO do mundo e nos limites de squares visíveis (IsoCell render)."
+    },
+    {
+      "id": "Q3",
+      "why": "Layout do Kahlua para o LuaSampler do agente (nomes de campos).",
+      "calls": [
+        {"name": "inspect_android_class", "arguments": {"path": "APK", "class_name": "zombie.Lua.LuaManager"}},
+        {"name": "inspect_android_class", "arguments": {"path": "APK", "class_name": "se.krka.kahlua.vm.KahluaThread"}},
+        {"name": "inspect_android_class", "arguments": {"path": "APK", "class_name": "se.krka.kahlua.vm.Coroutine"}},
+        {"name": "inspect_android_class", "arguments": {"path": "APK", "class_name": "se.krka.kahlua.vm.LuaCallFrame"}},
+        {"name": "inspect_android_class", "arguments": {"path": "APK", "class_name": "se.krka.kahlua.vm.Prototype"}}
+      ],
+      "expect": "LuaManager.thread (static), KahluaThread.currentCoroutine, Coroutine.callFrameStack/callFrameTop, LuaCallFrame.closure/pc, Prototype.name|filename + lines. Divergência -> ajuste LuaSampler.java ou passe luaManagerClass/luaThreadField."
+    },
+    {
+      "id": "Q4",
+      "why": "Funções globais Lua usadas pelo Focus.lua e o espaço de coordenadas de isoToScreenX.",
+      "calls": [
+        {"name": "search_android_classes", "arguments": {"path": "APK", "query": "GlobalObject"}, "note": "use o nome exato retornado (JADX pode grafar a inner class como LuaManager.GlobalObject ou LuaManager$GlobalObject) nas chamadas abaixo"},
+        {"name": "inspect_android_method", "arguments": {"path": "APK", "class_name": "zombie.Lua.LuaManager$GlobalObject", "method_name": "isoToScreenX"}},
+        {"name": "inspect_android_method", "arguments": {"path": "APK", "class_name": "zombie.Lua.LuaManager$GlobalObject", "method_name": "getPlayerScreenLeft"}},
+        {"name": "inspect_android_method", "arguments": {"path": "APK", "class_name": "zombie.Lua.LuaManager$GlobalObject", "method_name": "getFilenameOfClosure"}}
+      ],
+      "expect": "isoToScreenX retorna px de tela já com zoom e offset do jogador (mesmo espaço de getPlayerScreenLeft). Se não incluir o offset, some getPlayerScreenLeft em Focus.isOnScreen."
+    },
+    {
+      "id": "Q5",
+      "why": "Lista autoritativa de chaves do options.ini e suas escalas (para descomentar options-perf.ini).",
+      "calls": [
+        {"name": "inspect_android_method", "arguments": {"path": "APK", "class_name": "zombie.core.Core", "method_name": "saveOptions"}},
+        {"name": "inspect_android_method", "arguments": {"path": "APK", "class_name": "zombie.core.Core", "method_name": "loadOptions"}}
+      ],
+      "expect": "Strings 'chave=' + campo; leia o tipo/limites de cada campo (lightingQuality, fogQuality, perf*)."
+    },
+    {
+      "id": "Q6",
+      "why": "Ordem de carregamento dos .lua (garante que !!ZPerf_Bootstrap.lua roda antes dos outros mods).",
+      "calls": [
+        {"name": "inspect_android_method", "arguments": {"path": "APK", "class_name": "zombie.Lua.LuaManager", "method_name": "LoadDirBase"}},
+        {"name": "trace_android_references", "arguments": {"path": "APK", "class_name": "zombie.Lua.LuaManager", "method_name": "LoadDirBase"}}
+      ],
+      "expect": "Arquivos de shared/ de todos os mods reunidos e ordenados por caminho relativo antes de client/."
+    }
+  ]
+}

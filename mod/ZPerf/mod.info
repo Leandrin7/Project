@@ -1,0 +1,5 @@
+name=ZPerf - Performance Toolkit
+id=ZPerf
+description=Profiler de handlers Lua por mod, LOD de OnZombieUpdate por distancia/tela, scheduler com orcamento e object pooling. Carregue antes dos outros mods.
+modversion=1.0.0
+versionMin=41.78
